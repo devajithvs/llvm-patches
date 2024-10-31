@@ -1,0 +1,52 @@
+From 2dbc4f2d8b188cc4e70f9b7b073f1b448efb08be Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:17 +0100
+Subject: [PATCH 15/52] Revert "Disable diags of dupe default args (func,
+ templt) temporarily."
+
+This reverts commit 56d432d412da9b5fe464063973b1834ce4ea1aa5.
+---
+ interpreter/llvm-project/clang/lib/Sema/SemaDeclCXX.cpp  | 3 ---
+ interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp | 2 --
+ 2 files changed, 5 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Sema/SemaDeclCXX.cpp b/interpreter/llvm-project/clang/lib/Sema/SemaDeclCXX.cpp
+index 5e55e37715..5607142798 100644
+--- a/interpreter/llvm-project/clang/lib/Sema/SemaDeclCXX.cpp
++++ b/interpreter/llvm-project/clang/lib/Sema/SemaDeclCXX.cpp
+@@ -559,8 +559,6 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
+         }
+       }
+ 
+-      (void)DiagDefaultParamID;
+-#if 0 // Disable until Diag is rewired
+       // FIXME: If we knew where the '=' was, we could easily provide a fix-it
+       // hint here. Alternatively, we could walk the type-source information
+       // for NewParam to find the last source location in the type... but it
+@@ -582,7 +580,6 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
+ 
+       Diag(OldParam->getLocation(), diag::note_previous_definition)
+         << OldParam->getDefaultArgRange();
+-#endif
+     } else if (OldParamHasDfl) {
+       // Merge the old default argument into the new parameter unless the new
+       // function is a friend declaration in a template class. In the latter
+diff --git a/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp b/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp
+index 07b12cf23f..a700a73ebb 100644
+--- a/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp
++++ b/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp
+@@ -3170,10 +3170,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+     // checked elsewhere. But it is still not allowed to repeat template default
+     // argument in the same translation unit.
+     if (RedundantDefaultArg) {
+-#if 0 // Disable until Diag is rewired
+       Diag(NewDefaultLoc, diag::err_template_param_default_arg_redefinition);
+       Diag(OldDefaultLoc, diag::note_template_param_prev_default_arg);
+-#endif
+       Invalid = true;
+     } else if (InconsistentDefaultArg) {
+       // We could only diagnose about the case that the OldParam is imported.
+-- 
+2.43.5
+

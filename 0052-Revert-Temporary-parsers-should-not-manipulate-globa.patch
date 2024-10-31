@@ -1,0 +1,185 @@
+From 2ef8edd62e5320d2c0e8dbd490e76a4ae23c4520 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:21 +0100
+Subject: [PATCH 52/52] Revert "Temporary parsers should not manipulate global
+ parser state."
+
+This reverts commit f3909c0bd067c4eed56123c858620d30b1ca43ef.
+---
+ .../clang/include/clang/Parse/Parser.h        | 37 +------------------
+ .../clang/lib/Parse/ParsePragma.cpp           |  8 ----
+ .../llvm-project/clang/lib/Parse/Parser.cpp   | 34 +++++++----------
+ 3 files changed, 15 insertions(+), 64 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/include/clang/Parse/Parser.h b/interpreter/llvm-project/clang/include/clang/Parse/Parser.h
+index 378adbb728..ffbde370e8 100644
+--- a/interpreter/llvm-project/clang/include/clang/Parse/Parser.h
++++ b/interpreter/llvm-project/clang/include/clang/Parse/Parser.h
+@@ -46,7 +46,6 @@ namespace clang {
+   struct OMPTraitSelector;
+   struct OMPTraitSet;
+   class OMPTraitInfo;
+-  class DestroyTemplateIdAnnotationsRAIIObj;
+ 
+ /// Parser - This implements a parser for the C family of languages.  After
+ /// parsing units of the grammar, productions are invoked to handle whatever has
+@@ -62,7 +61,6 @@ class Parser : public CodeCompletionHandler {
+   friend class ObjCDeclContextSwitch;
+   friend class ParenBraceBracketBalancer;
+   friend class BalancedDelimiterTracker;
+-  friend class DestroyTemplateIdAnnotationsRAIIObj;
+ 
+   Preprocessor &PP;
+ 
+@@ -456,11 +454,8 @@ class Parser : public CodeCompletionHandler {
+   /// a statement expression and builds a suitable expression statement.
+   StmtResult handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx);
+ 
+-  bool IsTemporary;
+-
+ public:
+-  Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies, 
+-         bool isTemp = false);
++  Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
+   ~Parser() override;
+ 
+   const LangOptions &getLangOpts() const { return PP.getLangOpts(); }
+@@ -470,34 +465,6 @@ public:
+   AttributeFactory &getAttrFactory() { return AttrFactory; }
+ 
+   const Token &getCurToken() const { return Tok; }
+-
+-  /// A RAII object to temporarily reset PP's state and restore it.
+-  class ParserCurTokRestoreRAII {
+-  private:
+-    Parser &P;
+-    Token SavedTok;
+-
+-  public:
+-    ParserCurTokRestoreRAII(Parser &P)
+-      : P(P), SavedTok(P.Tok) 
+-    {
+-    }
+-
+-    void pop() {
+-      if (SavedTok.is(tok::unknown))
+-        return;
+-
+-      P.Tok = SavedTok;
+-      
+-      SavedTok.startToken();
+-    }
+-
+-    ~ParserCurTokRestoreRAII() {
+-      pop();
+-    }
+-  };
+-
+-
+   Scope *getCurScope() const { return Actions.getCurScope(); }
+   void incrementMSManglingNumber() const {
+     return Actions.incrementMSManglingNumber();
+@@ -1258,7 +1225,7 @@ public:
+     return Diag(Tok, DiagID);
+   }
+ 
+-protected:
++private:
+   void SuggestParentheses(SourceLocation Loc, unsigned DK,
+                           SourceRange ParenRange);
+   void CheckNestedObjCContexts(SourceLocation AtLoc);
+diff --git a/interpreter/llvm-project/clang/lib/Parse/ParsePragma.cpp b/interpreter/llvm-project/clang/lib/Parse/ParsePragma.cpp
+index 9c917f3d68..730ac1a0fe 100644
+--- a/interpreter/llvm-project/clang/lib/Parse/ParsePragma.cpp
++++ b/interpreter/llvm-project/clang/lib/Parse/ParsePragma.cpp
+@@ -415,10 +415,6 @@ void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
+ }  // end namespace
+ 
+ void Parser::initializePragmaHandlers() {
+-  // No pragma parsing for temporary parsers.
+-  if (IsTemporary)
+-    return;
+-
+   AlignHandler = std::make_unique<PragmaAlignHandler>();
+   PP.AddPragmaHandler(AlignHandler.get());
+ 
+@@ -572,10 +568,6 @@ void Parser::initializePragmaHandlers() {
+ }
+ 
+ void Parser::resetPragmaHandlers() {
+-  // No pragma parsing for temporary parsers.
+-  if (IsTemporary)
+-    return;
+-
+   // Remove the pragma handlers we installed.
+   PP.RemovePragmaHandler(AlignHandler.get());
+   AlignHandler.reset();
+diff --git a/interpreter/llvm-project/clang/lib/Parse/Parser.cpp b/interpreter/llvm-project/clang/lib/Parse/Parser.cpp
+index 40904d177a..0b092181bc 100644
+--- a/interpreter/llvm-project/clang/lib/Parse/Parser.cpp
++++ b/interpreter/llvm-project/clang/lib/Parse/Parser.cpp
+@@ -50,18 +50,15 @@ IdentifierInfo *Parser::getSEHExceptKeyword() {
+   return Ident__except;
+ }
+ 
+-Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies,
+-               bool isTemporary /*=false*/)
++Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
+     : PP(pp), PreferredType(pp.isCodeCompletionEnabled()), Actions(actions),
+       Diags(PP.getDiagnostics()), GreaterThanIsOperator(true),
+       ColonIsSacred(false), InMessageExpression(false),
+-      TemplateParameterDepth(0), ParsingInObjCContainer(false),
+-      IsTemporary(isTemporary) {
++      TemplateParameterDepth(0), ParsingInObjCContainer(false) {
+   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
+   Tok.startToken();
+   Tok.setKind(tok::eof);
+-  if (!IsTemporary)
+-    Actions.CurScope = nullptr;
++  Actions.CurScope = nullptr;
+   NumCachedScopes = 0;
+   CurParsedObjCImpl = nullptr;
+ 
+@@ -70,17 +67,14 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies,
+   initializePragmaHandlers();
+ 
+   CommentSemaHandler.reset(new ActionCommentHandler(actions));
+-  if (!IsTemporary)
+-    PP.addCommentHandler(CommentSemaHandler.get());
+-
+-  if (!IsTemporary) {
+-    PP.setCodeCompletionHandler(*this);
+-    Actions.ParseTypeFromStringCallback = [this](StringRef TypeStr,
+-                                                 StringRef Context,
+-                                                 SourceLocation IncludeLoc) {
+-      return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
+-    };
+-  }
++  PP.addCommentHandler(CommentSemaHandler.get());
++
++  PP.setCodeCompletionHandler(*this);
++
++  Actions.ParseTypeFromStringCallback =
++      [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
++        return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
++      };
+ }
+ 
+ DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
+@@ -474,10 +468,8 @@ Parser::ParseScopeFlags::~ParseScopeFlags() {
+ 
+ Parser::~Parser() {
+   // If we still have scopes active, delete the scope tree.
+-  if (!IsTemporary) {
+-    delete getCurScope();
+-    Actions.CurScope = nullptr;
+-  }
++  delete getCurScope();
++  Actions.CurScope = nullptr;
+ 
+   // Free the scope cache.
+   for (unsigned i = 0, e = NumCachedScopes; i != e; ++i)
+-- 
+2.43.5
+

@@ -1,0 +1,82 @@
+From deaa92497c51ae52289a45b8582071d92180f5c6 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:19 +0100
+Subject: [PATCH 26/52] Revert "D154328: [AST] Add API to iterate already
+ loaded specializations"
+
+This reverts commit 36e8c8fb636a357e436969c3981c988ee7946825.
+---
+ .../clang/include/clang/AST/DeclTemplate.h    | 42 -------------------
+ 1 file changed, 42 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/include/clang/AST/DeclTemplate.h b/interpreter/llvm-project/clang/include/clang/AST/DeclTemplate.h
+index 04832a91d6..832ad2de6b 100644
+--- a/interpreter/llvm-project/clang/include/clang/AST/DeclTemplate.h
++++ b/interpreter/llvm-project/clang/include/clang/AST/DeclTemplate.h
+@@ -1084,20 +1084,6 @@ public:
+     return makeSpecIterator(getSpecializations(), true);
+   }
+ 
+-  /// All specializations that that have already been loaded, ie avoiding
+-  /// deserialization of lazily registered specializations.
+-  spec_range loaded_specializations() const {
+-    return spec_range(loaded_spec_begin(), loaded_spec_end());
+-  }
+-
+-  spec_iterator loaded_spec_begin() const {
+-    return makeSpecIterator(getCommonPtr()->Specializations, false);
+-  }
+-
+-  spec_iterator loaded_spec_end() const {
+-    return makeSpecIterator(getCommonPtr()->Specializations, true);
+-  }
+-
+   /// Return whether this function template is an abbreviated function template,
+   /// e.g. `void foo(auto x)` or `template<typename T> void foo(auto x)`
+   bool isAbbreviated() const {
+@@ -2435,20 +2421,6 @@ public:
+     return makeSpecIterator(getSpecializations(), true);
+   }
+ 
+-  /// All specializations that that have already been loaded, ie avoiding
+-  /// deserialization of lazily registered specializations.
+-  spec_range loaded_specializations() const {
+-    return spec_range(loaded_spec_begin(), loaded_spec_end());
+-  }
+-
+-  spec_iterator loaded_spec_begin() const {
+-    return makeSpecIterator(getCommonPtr()->Specializations, false);
+-  }
+-
+-  spec_iterator loaded_spec_end() const {
+-    return makeSpecIterator(getCommonPtr()->Specializations, true);
+-  }
+-
+   // Implement isa/cast/dyncast support
+   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+   static bool classofKind(Kind K) { return K == ClassTemplate; }
+@@ -3194,20 +3166,6 @@ public:
+     return makeSpecIterator(getSpecializations(), true);
+   }
+ 
+-  /// All specializations that that have already been loaded, ie avoiding
+-  /// deserialization of lazily registered specializations.
+-  spec_range loaded_specializations() const {
+-    return spec_range(loaded_spec_begin(), loaded_spec_end());
+-  }
+-
+-  spec_iterator loaded_spec_begin() const {
+-    return makeSpecIterator(getCommonPtr()->Specializations, false);
+-  }
+-
+-  spec_iterator loaded_spec_end() const {
+-    return makeSpecIterator(getCommonPtr()->Specializations, true);
+-  }
+-
+   // Implement isa/cast/dyncast support
+   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+   static bool classofKind(Kind K) { return K == VarTemplate; }
+-- 
+2.43.5
+

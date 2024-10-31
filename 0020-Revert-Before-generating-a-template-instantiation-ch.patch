@@ -1,0 +1,36 @@
+From eb4cabe329f6bf8b4ff436670680af0656057895 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:18 +0100
+Subject: [PATCH 20/52] Revert "Before generating a template instantiation
+ check if we can get externally."
+
+This reverts commit c74bf3c76c568ee22005741dee9ab5b4f248d69d.
+---
+ .../clang/lib/Sema/SemaTemplateInstantiate.cpp         | 10 ----------
+ 1 file changed, 10 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Sema/SemaTemplateInstantiate.cpp b/interpreter/llvm-project/clang/lib/Sema/SemaTemplateInstantiate.cpp
+index 9c3f6da5b9..e12186d7d8 100644
+--- a/interpreter/llvm-project/clang/lib/Sema/SemaTemplateInstantiate.cpp
++++ b/interpreter/llvm-project/clang/lib/Sema/SemaTemplateInstantiate.cpp
+@@ -3798,16 +3798,6 @@ getPatternForClassTemplateSpecialization(
+     }
+     Pattern = PartialSpec;
+   } else {
+-    //   -- If no matches are found, the instantiation is generated
+-    //      from the primary template.
+-
+-    // Try first to get it externally:
+-    if(S.getExternalSource()) {
+-      S.getExternalSource()->CompleteType(ClassTemplateSpec);
+-      if (ClassTemplateSpec->getDefinition())
+-        return ClassTemplateSpec;
+-    }
+-
+     ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
+     while (Template->getInstantiatedFromMemberTemplate()) {
+       // If we've found an explicit specialization of this class template,
+-- 
+2.43.5
+

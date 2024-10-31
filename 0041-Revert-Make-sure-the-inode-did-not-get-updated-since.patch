@@ -1,0 +1,30 @@
+From 2b03d60400aab80c7e7e1ef3f055bffcb57ab0c5 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:20 +0100
+Subject: [PATCH 41/52] Revert "Make sure the inode did not get updated since
+ we read it."
+
+This reverts commit 3571eb8109a1a0bd8faa1d55f0c94059d217c894.
+---
+ interpreter/llvm-project/clang/lib/Basic/FileManager.cpp | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Basic/FileManager.cpp b/interpreter/llvm-project/clang/lib/Basic/FileManager.cpp
+index 756d8cffee..6ac6783839 100644
+--- a/interpreter/llvm-project/clang/lib/Basic/FileManager.cpp
++++ b/interpreter/llvm-project/clang/lib/Basic/FileManager.cpp
+@@ -339,9 +339,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
+   }
+ 
+   FileEntryRef ReturnedRef(*NamedFileEnt);
+-  if (ReusingEntry &&
+-      llvm::sys::toTimeT(Status.getLastModificationTime()) == UFE->ModTime) {
+-    // Already have an entry with this inode, return it.
++  if (ReusingEntry) { // Already have an entry with this inode, return it.
+ 
+     // FIXME: This hack ensures that `getDir()` will use the path that was
+     // used to lookup this file, even if we found a file by different path
+-- 
+2.43.5
+

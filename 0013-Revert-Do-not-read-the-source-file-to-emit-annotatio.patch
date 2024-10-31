@@ -1,0 +1,44 @@
+From 383254e1d46271672733b683d2f5a04d61a6f0c6 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:17 +0100
+Subject: [PATCH 13/52] Revert "Do not read the source file to emit
+ annotations."
+
+This reverts commit 0031299cdadaed39ee906eb1edcc830961084866.
+---
+ .../llvm-project/clang/lib/CodeGen/CodeGenModule.cpp     | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/CodeGen/CodeGenModule.cpp b/interpreter/llvm-project/clang/lib/CodeGen/CodeGenModule.cpp
+index 4ae06b8b87..eb13cd40eb 100644
+--- a/interpreter/llvm-project/clang/lib/CodeGen/CodeGenModule.cpp
++++ b/interpreter/llvm-project/clang/lib/CodeGen/CodeGenModule.cpp
+@@ -3267,21 +3267,18 @@ llvm::Constant *CodeGenModule::EmitAnnotationString(StringRef Str) {
+ 
+ llvm::Constant *CodeGenModule::EmitAnnotationUnit(SourceLocation Loc) {
+   SourceManager &SM = getContext().getSourceManager();
+-  //PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+-  //if (PLoc.isValid())
+-  //  return EmitAnnotationString(PLoc.getFilename());
++  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
++  if (PLoc.isValid())
++    return EmitAnnotationString(PLoc.getFilename());
+   return EmitAnnotationString(SM.getBufferName(Loc));
+ }
+ 
+ llvm::Constant *CodeGenModule::EmitAnnotationLineNo(SourceLocation L) {
+-  return llvm::ConstantInt::get(Int32Ty, 1);
+-#if 0
+   SourceManager &SM = getContext().getSourceManager();
+   PresumedLoc PLoc = SM.getPresumedLoc(L);
+   unsigned LineNo = PLoc.isValid() ? PLoc.getLine() :
+     SM.getExpansionLineNumber(L);
+   return llvm::ConstantInt::get(Int32Ty, LineNo);
+-#endif
+ }
+ 
+ llvm::Constant *CodeGenModule::EmitAnnotationArgs(const AnnotateAttr *Attr) {
+-- 
+2.43.5
+

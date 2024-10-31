@@ -1,0 +1,34 @@
+From b08ea5c0c7ff74a500282aec3293dfebfff40f25 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:20 +0100
+Subject: [PATCH 44/52] Revert "Mark the file entry invalid, until reread.
+ Invalidate SLocEntry cache, readd it on reread."
+
+This reverts commit 12b4c4e27444999596a950523457dcb3f2cc0ca5.
+---
+ .../llvm-project/clang/lib/Basic/SourceManager.cpp        | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Basic/SourceManager.cpp b/interpreter/llvm-project/clang/lib/Basic/SourceManager.cpp
+index c10d71c748..e3af7ff58a 100644
+--- a/interpreter/llvm-project/clang/lib/Basic/SourceManager.cpp
++++ b/interpreter/llvm-project/clang/lib/Basic/SourceManager.cpp
+@@ -366,14 +366,6 @@ void SourceManager::invalidateCache(FileID FID) {
+     E->setBuffer(nullptr);
+     E = 0;
+   }
+-  if (!FID.isInvalid()) {
+-    const SrcMgr::SLocEntry& SLocE = getSLocEntry(FID);
+-    if (SLocE.isFile()) {
+-      SrcMgr::ContentCache& CC =
+-        const_cast<SrcMgr::ContentCache&>(SLocE.getFile().getContentCache());
+-      CC.setBuffer(nullptr);
+-    }
+-  }
+   getFileManager().invalidateCache(*Entry);
+ }
+ 
+-- 
+2.43.5
+

@@ -1,0 +1,58 @@
+From f19770c367be458506ece450149294797f7ec682 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:17 +0100
+Subject: [PATCH 16/52] Revert "Expose all files included in PCH/PCM to
+ FileManager."
+
+This reverts commit 3ee99cb3c9eae621dde0ccbfa1cc9dd8c734ced5.
+---
+ .../clang/lib/Serialization/ASTReader.cpp          | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp b/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp
+index a994219164..a7b134ac4d 100644
+--- a/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp
++++ b/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp
+@@ -2858,10 +2858,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
+       // All user input files reside at the index range [0, NumUserInputs), and
+       // system input files reside at [NumUserInputs, NumInputs). For explicitly
+       // loaded module files, ignore missing inputs.
+-      bool Validate = !DisableValidation && F.Kind != MK_ExplicitModule &&
+-        F.Kind != MK_PrebuiltModule;
++      if (!DisableValidation && F.Kind != MK_ExplicitModule &&
++          F.Kind != MK_PrebuiltModule) {
+         bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
+-        Complain &= Validate;
+ 
+         // If we are reading a module, we will create a verification timestamp,
+         // so we verify all input files.  Otherwise, verify only user input
+@@ -2873,13 +2872,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
+             F.Kind == MK_ImplicitModule)
+           N = NumUserInputs;
+ 
+-        for (unsigned I = 0; I < NumInputs; ++I) {
+-          if (I == N)
+-            Complain = false;
++        for (unsigned I = 0; I < N; ++I) {
+           InputFile IF = getInputFile(F, I+1, Complain);
+-          if (Validate && (!IF.getFile() || IF.isOutOfDate()))
++          if (!IF.getFile() || IF.isOutOfDate())
+             return OutOfDate;
+         }
++      }
+ 
+       if (Listener)
+         Listener->visitModuleFile(F.FileName, F.Kind);
+@@ -2925,7 +2923,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
+           //
+           // FIXME: Allow this for files explicitly specified with -include-pch.
+           bool AllowCompatibleConfigurationMismatch =
+-            F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule;
++              F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule;
+ 
+           ASTReadResult Result =
+               ReadOptionsBlock(Stream, ClientLoadCapabilities,
+-- 
+2.43.5
+

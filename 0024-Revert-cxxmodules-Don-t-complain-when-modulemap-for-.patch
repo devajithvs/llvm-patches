@@ -1,0 +1,52 @@
+From db2a58e1fe91b0a844a395f672f1d74c97601028 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:18 +0100
+Subject: [PATCH 24/52] Revert "[cxxmodules] Don't complain when modulemap for
+ implicit modules has changed"
+
+This reverts commit 9e215725bdd102bb7a972bb2f3d0c68116248d20.
+---
+ .../llvm-project/clang/lib/Serialization/ASTReader.cpp | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp b/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp
+index b5b22ab5aa..b35ea14d3b 100644
+--- a/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp
++++ b/interpreter/llvm-project/clang/lib/Serialization/ASTReader.cpp
+@@ -4210,13 +4210,9 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
+ 
+     assert(M && M->Name == F.ModuleName && "found module with different name");
+ 
+-    // Check any additional module map files (e.g. module.private.modulemap)
+-    // that are not in the pcm.
+-    bool DisableValidation = PP.getPreprocessorOpts().DisablePCHOrModuleValidation !=
+-                                  DisableValidationForModuleKind::None;
+     // Check the primary module map file.
+     auto StoredModMap = FileMgr.getFile(F.ModuleMapPath);
+-    if (!DisableValidation && (!StoredModMap || *StoredModMap != ModMap)) {
++    if (!StoredModMap || *StoredModMap != ModMap) {
+       assert(ModMap && "found module is missing module map file");
+       assert((ImportedBy || F.Kind == MK_ImplicitModule) &&
+              "top-level import should be verified");
+@@ -4241,7 +4237,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
+       AdditionalStoredMaps.insert(*SF);
+     }
+ 
+-    if (!DisableValidation) {
++    // Check any additional module map files (e.g. module.private.modulemap)
++    // that are not in the pcm.
+     if (auto *AdditionalModuleMaps = Map.getAdditionalModuleMapFiles(M)) {
+       for (FileEntryRef ModMap : *AdditionalModuleMaps) {
+         // Remove files that match
+@@ -4264,7 +4261,6 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
+       return OutOfDate;
+     }
+   }
+-  }
+ 
+   if (Listener)
+     Listener->ReadModuleMapFile(F.ModuleMapPath);
+-- 
+2.43.5
+

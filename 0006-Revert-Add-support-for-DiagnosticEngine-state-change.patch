@@ -1,0 +1,50 @@
+From cac9ecd945f3fc87531271fae60ae2adcc1c6413 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:16 +0100
+Subject: [PATCH 06/52] Revert "Add support for DiagnosticEngine state change
+ within recursive parsing."
+
+This reverts commit fc65122ca30028eb8bd61440b26706f7895aaafe.
+---
+ .../clang/lib/Basic/Diagnostic.cpp            | 24 +------------------
+ 1 file changed, 1 insertion(+), 23 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Basic/Diagnostic.cpp b/interpreter/llvm-project/clang/lib/Basic/Diagnostic.cpp
+index 9e5e350bea..0208ccc31b 100644
+--- a/interpreter/llvm-project/clang/lib/Basic/Diagnostic.cpp
++++ b/interpreter/llvm-project/clang/lib/Basic/Diagnostic.cpp
+@@ -190,29 +190,7 @@ void DiagnosticsEngine::DiagStateMap::append(SourceManager &SrcMgr,
+        Offset = F->ParentOffset, F = F->Parent) {
+     F->HasLocalTransitions = true;
+     auto &Last = F->StateTransitions.back();
+-    if (Last.Offset > Offset) {
+-      // Deal with a state change induce by recursive parsing.  The first parsing is
+-      // suspended and a (recursive) parsing is started between associated (in the upper/outer
+-      // file) with a newer line (hence greater offset).  After the end of the recursive
+-      // parsing, we go back to the first parsing and any state change will done 'earlier'
+-      // and trigger:
+-      //   assert(Last.Offset <= Offset && "state transitions added out of order");
+-      auto OnePastIt = std::upper_bound(
+-        F->StateTransitions.begin(), F->StateTransitions.end(), Offset,
+-        [](unsigned Offset, const DiagStatePoint &P) {
+-          return Offset < P.Offset;
+-        });
+-      if (OnePastIt == F->StateTransitions.begin() || (OnePastIt[-1].Offset != Offset)) {
+-        F->StateTransitions.insert( OnePastIt, {State, Offset});
+-      } else {
+-        auto &Prev = OnePastIt[-1];
+-        if (Prev.State == State)
+-          break;
+-        Prev.State = State;
+-        continue;
+-      }
+-      continue;
+-    }
++    assert(Last.Offset <= Offset && "state transitions added out of order");
+ 
+     if (Last.Offset == Offset) {
+       if (Last.State == State)
+-- 
+2.43.5
+
