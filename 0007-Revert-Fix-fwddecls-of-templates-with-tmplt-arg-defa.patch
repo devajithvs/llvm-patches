@@ -1,0 +1,139 @@
+From 004bbd5f31099b98bbf1d1cd8474f5d60f3de1c7 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:17 +0100
+Subject: [PATCH 07/51] Revert "Fix fwddecls of templates with tmplt arg
+ defauls coming from dictionaries (CMS / std::less). (#849)"
+
+This reverts commit 072be8cbb420622ffd119cc7f07a94b1d4bed677.
+---
+ .../clang/include/clang/Sema/Sema.h           |  3 +-
+ .../clang/lib/Sema/SemaTemplate.cpp           | 37 ++++---------------
+ 2 files changed, 9 insertions(+), 31 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/include/clang/Sema/Sema.h b/interpreter/llvm-project/clang/include/clang/Sema/Sema.h
+index d9ea8970e9..e2b260b904 100644
+--- a/interpreter/llvm-project/clang/include/clang/Sema/Sema.h
++++ b/interpreter/llvm-project/clang/include/clang/Sema/Sema.h
+@@ -8396,8 +8396,7 @@ public:
+   bool CheckTemplateParameterList(TemplateParameterList *NewParams,
+                                   TemplateParameterList *OldParams,
+                                   TemplateParamListContext TPC,
+-                                  SkipBodyInfo *SkipBody = nullptr,
+-                                  bool Complain = true);
++                                  SkipBodyInfo *SkipBody = nullptr);
+   TemplateParameterList *MatchTemplateParametersToScopeSpecifier(
+       SourceLocation DeclStartLoc, SourceLocation DeclLoc,
+       const CXXScopeSpec &SS, TemplateIdAnnotation *TemplateId,
+diff --git a/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp b/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp
+index 481b70d912..07b12cf23f 100644
+--- a/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp
++++ b/interpreter/llvm-project/clang/lib/Sema/SemaTemplate.cpp
+@@ -1828,12 +1828,6 @@ static void SetNestedNameSpecifier(Sema &S, TagDecl *T,
+   if (SS.isSet())
+     T->setQualifierInfo(SS.getWithLocInContext(S.Context));
+ }
+-static bool IsRootAutoloadDeclTemplate(ClassTemplateDecl *D) {
+-  for (TagDecl *TD = D->getTemplatedDecl(); TD; TD = TD->getPreviousDecl())
+-    if (auto AnnotAttr = TD->getAttr<AnnotateAttr>())
+-      return AnnotAttr->getAnnotation().startswith("$clingAutoload$");
+-  return false;
+-}
+ 
+ // Returns the template parameter list with all default template argument
+ // information.
+@@ -2094,20 +2088,6 @@ DeclResult Sema::CheckClassTemplate(
+     return true;
+   }
+ 
+-  // AXEL - do not check for redecls of template arg defaults when parsing
+-  // dictionary forward decls.
+-  bool fwdDeclFromROOT = false;
+-  for (const auto &A : Attr) {
+-    if (A.getKind() != ParsedAttr::AT_Annotate)
+-      continue;
+-    if (A.getNumArgs() > 0 && A.isArgExpr(0))
+-      if (auto AnnotVal = dyn_cast<StringLiteral>(A.getArgAsExpr(0)))
+-        if (AnnotVal->getString().startswith("$clingAutoload$"))
+-          fwdDeclFromROOT = true;
+-  }
+-  if (!fwdDeclFromROOT && PrevClassTemplate)
+-    fwdDeclFromROOT = IsRootAutoloadDeclTemplate(PrevClassTemplate);
+-
+   // Check the template parameter list of this declaration, possibly
+   // merging in the template parameter list from the previous class
+   // template declaration. Skip this check for a friend in a dependent
+@@ -2122,7 +2102,7 @@ DeclResult Sema::CheckClassTemplate(
+               ? TPC_ClassTemplateMember
+           : TUK == TUK_Friend ? TPC_FriendClassTemplate
+                               : TPC_ClassTemplate,
+-          SkipBody, /*Complain*/!fwdDeclFromROOT))
++          SkipBody))
+     Invalid = true;
+ 
+   if (SS.isSet()) {
+@@ -2968,8 +2948,7 @@ static bool DiagnoseUnexpandedParameterPacks(Sema &S,
+ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+                                       TemplateParameterList *OldParams,
+                                       TemplateParamListContext TPC,
+-                                      SkipBodyInfo *SkipBody,
+-                                      bool Complain /*true*/) {
++                                      SkipBodyInfo *SkipBody) {
+   bool Invalid = false;
+ 
+   // C++ [temp.param]p10:
+@@ -3011,7 +2990,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+     if (TemplateTypeParmDecl *NewTypeParm
+           = dyn_cast<TemplateTypeParmDecl>(*NewParam)) {
+       // Check the presence of a default argument here.
+-      if (Complain && NewTypeParm->hasDefaultArgument() &&
++      if (NewTypeParm->hasDefaultArgument() &&
+           DiagnoseDefaultTemplateArgument(*this, TPC,
+                                           NewTypeParm->getLocation(),
+                NewTypeParm->getDefaultArgumentInfo()->getTypeLoc()
+@@ -3063,7 +3042,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+       }
+ 
+       // Check the presence of a default argument here.
+-      if (Complain && NewNonTypeParm->hasDefaultArgument() &&
++      if (NewNonTypeParm->hasDefaultArgument() &&
+           DiagnoseDefaultTemplateArgument(*this, TPC,
+                                           NewNonTypeParm->getLocation(),
+                     NewNonTypeParm->getDefaultArgument()->getSourceRange())) {
+@@ -3114,7 +3093,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+       }
+ 
+       // Check the presence of a default argument here.
+-      if (Complain && NewTemplateParm->hasDefaultArgument() &&
++      if (NewTemplateParm->hasDefaultArgument() &&
+           DiagnoseDefaultTemplateArgument(*this, TPC,
+                                           NewTemplateParm->getLocation(),
+                      NewTemplateParm->getDefaultArgument().getSourceRange()))
+@@ -3190,13 +3169,13 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+     // argument to be repeated across translation unit. Note that the ODR is
+     // checked elsewhere. But it is still not allowed to repeat template default
+     // argument in the same translation unit.
+-    if (Complain && RedundantDefaultArg) {
++    if (RedundantDefaultArg) {
+ #if 0 // Disable until Diag is rewired
+       Diag(NewDefaultLoc, diag::err_template_param_default_arg_redefinition);
+       Diag(OldDefaultLoc, diag::note_template_param_prev_default_arg);
+ #endif
+       Invalid = true;
+-    } else if (Complain && InconsistentDefaultArg) {
++    } else if (InconsistentDefaultArg) {
+       // We could only diagnose about the case that the OldParam is imported.
+       // The case NewParam is imported should be handled in ASTReader.
+       Diag(NewDefaultLoc,
+@@ -3205,7 +3184,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
+            diag::note_template_param_prev_default_arg_in_other_module)
+           << PrevModuleName;
+       Invalid = true;
+-    } else if (Complain && MissingDefaultArg && TPC != TPC_FunctionTemplate) {
++    } else if (MissingDefaultArg && TPC != TPC_FunctionTemplate) {
+       // C++ [temp.param]p11:
+       //   If a template-parameter of a class template has a default
+       //   template-argument, each subsequent template-parameter shall either
+-- 
+2.43.5
+

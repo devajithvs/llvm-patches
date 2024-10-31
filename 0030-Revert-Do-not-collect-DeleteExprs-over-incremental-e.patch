@@ -1,0 +1,36 @@
+From 02d08e3847bd591ce29a12a45b571665153d1cd6 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:19 +0100
+Subject: [PATCH 30/51] Revert "Do not collect DeleteExprs over incremental
+ end-of-TUs (speedup)."
+
+This reverts commit 5fa21ab231b320da2799d0dfd8eb94a742d43d59.
+---
+ interpreter/llvm-project/clang/lib/Sema/Sema.cpp | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Sema/Sema.cpp b/interpreter/llvm-project/clang/lib/Sema/Sema.cpp
+index 7d1f257493..2d4e6d1d05 100644
+--- a/interpreter/llvm-project/clang/lib/Sema/Sema.cpp
++++ b/interpreter/llvm-project/clang/lib/Sema/Sema.cpp
+@@ -1451,7 +1451,7 @@ void Sema::ActOnEndOfTranslationUnit() {
+   }
+ 
+   if (!Diags.isIgnored(diag::warn_mismatched_delete_new, SourceLocation())) {
+-    if (ExternalSource && !PP.isIncrementalProcessingEnabled())
++    if (ExternalSource)
+       ExternalSource->ReadMismatchingDeleteExpressions(DeleteExprs);
+     for (const auto &DeletedFieldInfo : DeleteExprs) {
+       for (const auto &DeleteExprLoc : DeletedFieldInfo.second) {
+@@ -1459,7 +1459,6 @@ void Sema::ActOnEndOfTranslationUnit() {
+                                   DeleteExprLoc.second);
+       }
+     }
+-    DeleteExprs.clear();
+   }
+ 
+   AnalysisWarnings.IssueWarnings(Context.getTranslationUnitDecl());
+-- 
+2.43.5
+

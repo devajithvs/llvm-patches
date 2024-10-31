@@ -1,0 +1,30 @@
+From 44af2d0429247ebb2a69f4938d793f90e9852353 Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:16 +0100
+Subject: [PATCH 04/51] Revert "Allow cling as ASTSource to complete tmplt
+ spec:"
+
+This reverts commit 04b94e0cb450b774f40f24730679c01e71c6f3ee.
+---
+ interpreter/llvm-project/clang/lib/Sema/SemaType.cpp | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Sema/SemaType.cpp b/interpreter/llvm-project/clang/lib/Sema/SemaType.cpp
+index 9378448e3d..92086d7277 100644
+--- a/interpreter/llvm-project/clang/lib/Sema/SemaType.cpp
++++ b/interpreter/llvm-project/clang/lib/Sema/SemaType.cpp
+@@ -9462,9 +9462,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
+ 
+     // Give the external AST source a chance to complete the type.
+     if (auto *Source = Context.getExternalSource()) {
+-      // AXEL: allows ROOT to autoload/-parse template specializations before
+-      // trying to instantiate through the template definition. See ROOT-7462.
+-      if (Tag /*&& Tag->hasExternalLexicalStorage()*/)
++      if (Tag && Tag->hasExternalLexicalStorage())
+           Source->CompleteType(Tag);
+       if (IFace && IFace->hasExternalLexicalStorage())
+           Source->CompleteType(IFace);
+-- 
+2.43.5
+

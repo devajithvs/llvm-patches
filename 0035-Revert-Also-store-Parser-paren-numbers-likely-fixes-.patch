@@ -1,0 +1,36 @@
+From 456b57cf65a5d82675834fcc1c87a5cf17a9ec0c Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:20 +0100
+Subject: [PATCH 35/51] Revert "Also store Parser paren numbers; likely fixes
+ ROOT-6976:"
+
+This reverts commit 7552e7c0a60db7ee787e9249db2a6c9ce1004100.
+---
+ interpreter/llvm-project/clang/include/clang/Parse/Parser.h | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/include/clang/Parse/Parser.h b/interpreter/llvm-project/clang/include/clang/Parse/Parser.h
+index f34b94e71d..378adbb728 100644
+--- a/interpreter/llvm-project/clang/include/clang/Parse/Parser.h
++++ b/interpreter/llvm-project/clang/include/clang/Parse/Parser.h
+@@ -24,8 +24,6 @@
+ #include <optional>
+ #include <stack>
+ 
+-namespace cling { class ParserStateRAII; }
+-
+ namespace clang {
+   class PragmaHandler;
+   class Scope;
+@@ -65,7 +63,6 @@ class Parser : public CodeCompletionHandler {
+   friend class ParenBraceBracketBalancer;
+   friend class BalancedDelimiterTracker;
+   friend class DestroyTemplateIdAnnotationsRAIIObj;
+-  friend class ::cling::ParserStateRAII;
+ 
+   Preprocessor &PP;
+ 
+-- 
+2.43.5
+

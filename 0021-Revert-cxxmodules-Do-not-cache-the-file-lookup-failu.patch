@@ -1,0 +1,44 @@
+From 80bf3fe5f4206e697769313af8a0a4ec9846e3db Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:18 +0100
+Subject: [PATCH 21/51] Revert "[cxxmodules] Do not cache the file lookup
+ failure."
+
+This reverts commit be8ba551293d3d9a79a937adbdb2fa381039dc86.
+---
+ .../llvm-project/clang/lib/Lex/HeaderSearch.cpp       | 11 +----------
+ 1 file changed, 1 insertion(+), 10 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Lex/HeaderSearch.cpp b/interpreter/llvm-project/clang/lib/Lex/HeaderSearch.cpp
+index 332b95e415..7ab8527619 100644
+--- a/interpreter/llvm-project/clang/lib/Lex/HeaderSearch.cpp
++++ b/interpreter/llvm-project/clang/lib/Lex/HeaderSearch.cpp
+@@ -189,9 +189,6 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
+   if (FileMapOnly || HSOpts->PrebuiltModulePaths.empty())
+     return {};
+ 
+-  llvm::StringRef ModuleCachePath = getModuleCachePath();
+-  bool CacheFailure = true;
+-
+   // Then go through each prebuilt module directory and try to find the pcm
+   // file.
+   for (const std::string &Dir : HSOpts->PrebuiltModulePaths) {
+@@ -206,13 +203,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
+                                           ".pcm");
+     else
+       llvm::sys::path::append(Result, ModuleName + ".pcm");
+-    // If we have the same ModuleCachePath and PrebuiltModulePath pointing
+-    // to the same folder we should not cache the file lookup failure as it
+-    // may be currently building an implicit module.
+-    if (!ModuleCachePath.empty() && ModuleCachePath == Dir)
+-      CacheFailure = false;
+-
+-    if (getFileMgr().getFile(Result.str(), /*Open=*/false, CacheFailure))
++    if (getFileMgr().getFile(Result.str()))
+       return std::string(Result);
+   }
+ 
+-- 
+2.43.5
+

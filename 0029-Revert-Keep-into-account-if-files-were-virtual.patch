@@ -1,0 +1,44 @@
+From f7abb34e14541b31923039bbfce0a72cc6852d2e Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:19 +0100
+Subject: [PATCH 29/51] Revert "Keep into account if files were virtual."
+
+This reverts commit da54490ee59505128461f28e38f6ea360c928b38.
+---
+ interpreter/llvm-project/clang/lib/AST/ASTImporter.cpp       | 2 +-
+ .../clang/lib/Frontend/VerifyDiagnosticConsumer.cpp          | 5 -----
+ 2 files changed, 1 insertion(+), 6 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/AST/ASTImporter.cpp b/interpreter/llvm-project/clang/lib/AST/ASTImporter.cpp
+index 591dd0b9bb..12734d62ed 100644
+--- a/interpreter/llvm-project/clang/lib/AST/ASTImporter.cpp
++++ b/interpreter/llvm-project/clang/lib/AST/ASTImporter.cpp
+@@ -9906,7 +9906,7 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
+       // FIXME: We want to re-use the existing MemoryBuffer!
+       std::optional<llvm::MemoryBufferRef> FromBuf =
+           Cache->getBufferOrNone(FromContext.getDiagnostics(),
+-                                 FromFileManager, SourceLocation{});
++                                 FromSM.getFileManager(), SourceLocation{});
+       if (!FromBuf)
+         return llvm::make_error<ASTImportError>(ASTImportError::Unknown);
+ 
+diff --git a/interpreter/llvm-project/clang/lib/Frontend/VerifyDiagnosticConsumer.cpp b/interpreter/llvm-project/clang/lib/Frontend/VerifyDiagnosticConsumer.cpp
+index 3019493aa8..f508408ba7 100644
+--- a/interpreter/llvm-project/clang/lib/Frontend/VerifyDiagnosticConsumer.cpp
++++ b/interpreter/llvm-project/clang/lib/Frontend/VerifyDiagnosticConsumer.cpp
+@@ -543,11 +543,6 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
+           OptionalFileEntryRef File =
+               PP->LookupFile(Pos, Filename, false, nullptr, nullptr, nullptr,
+                              nullptr, nullptr, nullptr, nullptr, nullptr);
+-
+-          // Check if the file was virtual
+-          if (!File)
+-            File = SM.getFileManager().getOptionalFileRef(Filename);
+-
+           if (!File) {
+             Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                          diag::err_verify_missing_file)
+-- 
+2.43.5
+

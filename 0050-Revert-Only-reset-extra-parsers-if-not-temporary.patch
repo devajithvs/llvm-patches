@@ -1,0 +1,32 @@
+From 7d4f60f72d7f80e67697c545e885ce05ac47e04d Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:21 +0100
+Subject: [PATCH 50/51] Revert "Only reset extra parsers if not temporary."
+
+This reverts commit 16f9d81b27a5343f12b618560492aa50f2a672e7.
+---
+ interpreter/llvm-project/clang/lib/Parse/Parser.cpp | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/Parse/Parser.cpp b/interpreter/llvm-project/clang/lib/Parse/Parser.cpp
+index 26d38828b6..40904d177a 100644
+--- a/interpreter/llvm-project/clang/lib/Parse/Parser.cpp
++++ b/interpreter/llvm-project/clang/lib/Parse/Parser.cpp
+@@ -485,11 +485,9 @@ Parser::~Parser() {
+ 
+   resetPragmaHandlers();
+ 
+-  if (!IsTemporary)
+-    PP.removeCommentHandler(CommentSemaHandler.get());
++  PP.removeCommentHandler(CommentSemaHandler.get());
+ 
+-  if (!IsTemporary)
+-    PP.clearCodeCompletionHandler();
++  PP.clearCodeCompletionHandler();
+ 
+   DestroyTemplateIds();
+ }
+-- 
+2.43.5
+

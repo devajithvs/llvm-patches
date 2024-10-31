@@ -1,0 +1,31 @@
+From b5c6392a4a2e16f754774e937420c12c21e88c4e Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:19 +0100
+Subject: [PATCH 33/51] Revert "Clear pending decls from Builder in case of
+ errors (ROOT-7295)."
+
+This reverts commit 35b88d6df6bc16a36c5dd402361d5303a6537a1c.
+---
+ interpreter/llvm-project/clang/lib/CodeGen/ModuleBuilder.cpp | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/CodeGen/ModuleBuilder.cpp b/interpreter/llvm-project/clang/lib/CodeGen/ModuleBuilder.cpp
+index f4a5e0fc68..8ad774295f 100644
+--- a/interpreter/llvm-project/clang/lib/CodeGen/ModuleBuilder.cpp
++++ b/interpreter/llvm-project/clang/lib/CodeGen/ModuleBuilder.cpp
+@@ -107,11 +107,6 @@ namespace clang {
+     }
+ 
+     llvm::Module *ReleaseModule() {
+-      // Remove pending etc decls in case of error; the asserts in StartModule()
+-      // will rightfully be confused otherwise, as none of the decls were
+-      // emitted.
+-      if (Diags.hasErrorOccurred())
+-        Builder->clear();
+       return M.release();
+     }
+ 
+-- 
+2.43.5
+

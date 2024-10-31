@@ -1,0 +1,35 @@
+From 24a783593851a76e6e9d0d15ce0a6ac1d3128baf Mon Sep 17 00:00:00 2001
+From: Devajith Valaparambil Sreeramaswamy
+ <devajith.valaparambil.sreeramaswamy@cern.ch>
+Date: Thu, 31 Oct 2024 09:32:17 +0100
+Subject: [PATCH 08/51] Revert "Improve int literal printing for template args.
+ To be upstreamed."
+
+This reverts commit 8730300675a8c6b426debc47b334a5d731296cb6.
+---
+ interpreter/llvm-project/clang/lib/AST/TemplateBase.cpp | 8 +-------
+ 1 file changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/interpreter/llvm-project/clang/lib/AST/TemplateBase.cpp b/interpreter/llvm-project/clang/lib/AST/TemplateBase.cpp
+index 130bbe8893..3310d7dc24 100644
+--- a/interpreter/llvm-project/clang/lib/AST/TemplateBase.cpp
++++ b/interpreter/llvm-project/clang/lib/AST/TemplateBase.cpp
+@@ -133,14 +133,8 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
+     } else
+       Out << "(" << T->getCanonicalTypeInternal().getAsString(Policy) << ")"
+           << Val;
+-  } else {
++  } else
+     Out << Val;
+-    // Handle cases where the value is too large to fit into the underlying type
+-    // i.e. where the unsignedness matters.
+-    if (T->isBuiltinType())
+-      if (Val.isUnsigned() && Val.getBitWidth() == 64 && Val.countLeadingOnes())
+-        Out << "ull";
+-  }
+ }
+ 
+ static unsigned getArrayDepth(QualType type) {
+-- 
+2.43.5
+
